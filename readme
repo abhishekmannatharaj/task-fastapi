@@ -8,17 +8,30 @@ A modular backend CRUD API built with **FastAPI** and **PostgreSQL**, structured
 
 ---
 ## System Flowchart & Architecture
-
-```mermaid
-flowchart TD
-    Client["Incoming HTTP Request"] --> Main["main.py<br/>(Boots App & Mounts /api/v1 Router)"]
-    Main --> Router["api/v1/posts/router.py<br/>(Route Handler: GET, POST, PUT, DELETE)"]
-    
-    Router -->|Validates Payload| Schemas["schemas.py<br/>(Pydantic V2 Schemas)<br/>- PostCreate (Input)<br/>- PostResponse (Output)"]
-    Router -->|Fetches / Saves Data| Models["models.py<br/>(SQLAlchemy ORM Model)<br/>Table: posts"]
-    
-    Models --> DB["database.py<br/>(Engine, SessionLocal, get_db)"]
-    DB --> Postgres[("PostgreSQL Database")]
+                                  [ Incoming HTTP Request ]
+                                              │
+                                              ▼
+                                         main.py
+                            (Boots App & Mounts /api/v1 Router)
+                                              │
+                                              ▼
+                                     api/v1/posts/router.py
+                         (Route Handler: GET, POST, PUT, DELETE)
+                                    /                 \
+        [Validates Payload]        /                   \  [Fetches / Saves Data]
+                                  ▼                     ▼
+                        schemas.py                     models.py
+                    (Pydantic V2 Models)         (SQLAlchemy ORM Model)
+                   - PostCreate (Input)           - Table: "posts"
+                   - PostResponse (Output)        - Columns: id, title, content,
+                                                             published, created_at
+                                                        │
+                                                        ▼
+                                                    database.py
+                                           (Engine, SessionLocal, get_db)
+                                                        │
+                                                        ▼
+                                                  PostgreSQL DB
 
 
 
