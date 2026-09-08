@@ -1,8 +1,16 @@
-pip install "fastapi[all]"
-psycopg2
 
 ## Run fastapi
-uvicorn main: app --reload
+
+```powershell
+# Create a fresh local Python execution sandbox environment
+py -3 -m venv venv
+
+# Activate your newly provisioned virtual sandbox infrastructure
+.\venv\Scripts\Activate.ps1
+
+# Bind and resolve all project framework and production module packages
+pip install -r requirements.txt
+```
 
 # FastAPI Instagram-Style Backend Service
 
