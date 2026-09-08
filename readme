@@ -7,6 +7,21 @@ psycopg2
 A modular backend CRUD API built with **FastAPI** and **PostgreSQL**, structured according to production best practices with versioned routing and segregated schemas.
 
 ---
+## System Flowchart & Architecture
+
+```mermaid
+flowchart TD
+    Client["Incoming HTTP Request"] --> Main["main.py<br/>(Boots App & Mounts /api/v1 Router)"]
+    Main --> Router["api/v1/posts/router.py<br/>(Route Handler: GET, POST, PUT, DELETE)"]
+    
+    Router -->|Validates Payload| Schemas["schemas.py<br/>(Pydantic V2 Schemas)<br/>- PostCreate (Input)<br/>- PostResponse (Output)"]
+    Router -->|Fetches / Saves Data| Models["models.py<br/>(SQLAlchemy ORM Model)<br/>Table: posts"]
+    
+    Models --> DB["database.py<br/>(Engine, SessionLocal, get_db)"]
+    DB --> Postgres[("PostgreSQL Database")]
+
+
+
 
 ## Project Architecture
 
