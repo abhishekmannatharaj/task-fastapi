@@ -6,3 +6,5 @@ python-dotenv
 pandas
 python-multipart
 SQLAlchemy==2.0.32
+python-jose[cryptography]
+bcrypt==4.3.0

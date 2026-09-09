@@ -1,7 +1,8 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
-
+from api.v1.auth.security import get_current_user
+from db.models import User
 from db.database import get_db
 from db.models import Post
 from api.v1.posts.schemas import PostCreate, PostResponse
@@ -19,7 +20,11 @@ async def read_posts(db: Session = Depends(get_db)):
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
-async def create_posts(post: PostCreate, db: Session = Depends(get_db)):
+async def create_posts(
+    post: PostCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     # Create new Post instance using validated data
     new_post = Post(**post.model_dump())
     db.add(new_post)
