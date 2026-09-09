@@ -1,25 +1,20 @@
-from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel
+from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy.sql.expression import text
+from sqlalchemy.sql.sqltypes import TIMESTAMP
+
+from db.database import Base
 
 
-# Base schema containing shared attributes
-class PostBase(BaseModel):
-    title: str
-    content: str
-    published: bool = True
-    rating: Optional[int] = None
+class Post(Base):
+    __tablename__ = "posts"
 
-
-# Your existing creation model (inherits all fields from PostBase)
-class PostCreate(PostBase):
-    pass
-
-
-# Response model - defines exactly what is sent back to the client
-class PostResponse(PostBase):
-    id: int
-    created_at: datetime
-
-    class Config:
-        from_attributes = True  # Allows Pydantic to read SQLAlchemy ORM models
+    id = Column(Integer, primary_key=True, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    content = Column(String, nullable=False)
+    published = Column(Boolean, server_default="TRUE", nullable=False)
+    rating = Column(Integer, nullable=True)
+    created_at = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=text("now()")
+    )

@@ -13,6 +13,11 @@ py -3 -m venv venv
 # Bind and resolve all project framework and production module packages
 pip install -r requirements.txt
 ```
+## docker
+
+ docker compose up --build -d
+ docker compose up -d
+ docker compose down
 
 # FastAPI Instagram-Style Backend Service
 
