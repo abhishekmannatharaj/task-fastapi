@@ -56,32 +56,6 @@ This service implements a modular, database-backed RESTful API following standar
 
 ---
 
-### CRUD Request Lifecycle Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as Client / Frontend
-    participant Route as FastAPI Router (/posts)
-    participant Schema as Pydantic (PostCreate)
-    participant DB as SQLAlchemy Session (get_db)
-    participant PG as PostgreSQL Engine
-
-    Client->>Route: POST /api/v1/posts/ (JSON Payload)
-    Route->>Schema: Validate JSON structure
-    alt Schema Validation Fails
-        Schema-->>Client: 422 Unprocessable Entity
-    else Schema Validation Passes
-        Route->>DB: Open Session (yield db)
-        Route->>DB: Instantiate Post(**post.model_dump())
-        Route->>PG: INSERT INTO posts ... RETURNING *
-        PG-->>DB: Raw Row Record
-        Route->>DB: db.commit() & db.refresh()
-        Route-->>Client: 201 Created (Serialized PostResponse)
-        Route->>DB: db.close() (Session cleanup)
-    end
-
----
 ## Authentication & Security Cheat Sheet
 
 This API implements stateless **OAuth2 Password Bearer Authentication** using signed **JSON Web Tokens (JWT)** and **bcrypt** password hashing.
@@ -106,38 +80,6 @@ This API implements stateless **OAuth2 Password Bearer Authentication** using si
 * **Schema Separation:** Input credentials (`UserCreate`) accept raw passwords, while responses (`UserResponse`) omit sensitive fields to prevent credential leakage[cite: 1].
 
 ---
-
-### Authentication Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as Client / Swagger
-    participant Auth as Auth Router (/login)
-    participant DB as PostgreSQL (users)
-    participant Sec as Security Engine (JWT)
-    participant Protected as Posts Router (/posts)
-
-    Client->>Auth: POST /api/v1/auth/login (username & password)
-    Auth->>DB: Query user by email
-    DB-->>Auth: Return user record (with hashed password)
-    Auth->>Sec: verify_password(plain_password, hashed_password)
-    Sec-->>Auth: Verified (True)
-    Auth->>Sec: create_access_token(data={"user_id": id})
-    Sec-->>Auth: Encoded JWT String
-    Auth-->>Client: 200 OK {"access_token": "...", "token_type": "bearer"}
-
-    Note over Client,Protected: Authorized Requests
-    Client->>Protected: POST /api/v1/posts/ [Header: Authorization: Bearer <token>]
-    Protected->>Sec: get_current_user(token)
-    Sec->>Sec: Decode JWT & verify expiration
-    Sec->>DB: Fetch user by token user_id
-    DB-->>Sec: User object
-    Sec-->>Protected: Authenticated User context
-    Protected->>DB: Insert new post record
-    DB-->>Protected: Post inserted
-    Protected-->>Client: 201 Created Post JSON
-![alt text](img/image.png)
 
 ## Project Architecture
 
