@@ -10,12 +10,13 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Instagram-Style Backend API",
     version="1.0.0",
-    description="Modular CRUD backend using FastAPI, SQLAlchemy, and PostgreSQL",
+    description="Modular CRUD backend using FastAPI and PostgreSQL",
 )
 
+# Root endpoint
 @app.get("/")
 def read_root():
     return {"message": "Server is up and running"}
 
-app.include_router(posts_router, prefix="/api/v1")
-app.include_router(auth_router, prefix="/api/v1")
+# Register modular routers under versioned path prefix
+app.include_router(posts_router, prefix="/api/v1/posts", tags=["Posts"])

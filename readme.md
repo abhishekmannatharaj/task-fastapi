@@ -12,6 +12,10 @@ py -3 -m venv venv
 
 # Bind and resolve all project framework and production module packages
 pip install -r requirements.txt
+
+cd app
+docker desktop start
+docker compose up --build -d
 ```
 ## docker
 
@@ -55,33 +59,6 @@ This service implements a modular, database-backed RESTful API following standar
   Uses `server_default=text("now()")` in PostgreSQL to ensure the database engine stamps creation times precisely, removing clock-skew issues between servers.
 
 ---
-
-### CRUD Request Lifecycle Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as Client / Frontend
-    participant Route as FastAPI Router (/posts)
-    participant Schema as Pydantic (PostCreate)
-    participant DB as SQLAlchemy Session (get_db)
-    participant PG as PostgreSQL Engine
-
-    Client->>Route: POST /api/v1/posts/ (JSON Payload)
-    Route->>Schema: Validate JSON structure
-    alt Schema Validation Fails
-        Schema-->>Client: 422 Unprocessable Entity
-    else Schema Validation Passes
-        Route->>DB: Open Session (yield db)
-        Route->>DB: Instantiate Post(**post.model_dump())
-        Route->>PG: INSERT INTO posts ... RETURNING *
-        PG-->>DB: Raw Row Record
-        Route->>DB: db.commit() & db.refresh()
-        Route-->>Client: 201 Created (Serialized PostResponse)
-        Route->>DB: db.close() (Session cleanup)
-    end
-
----
 ## Authentication & Security Cheat Sheet
 
 This API implements stateless **OAuth2 Password Bearer Authentication** using signed **JSON Web Tokens (JWT)** and **bcrypt** password hashing.
@@ -107,53 +84,23 @@ This API implements stateless **OAuth2 Password Bearer Authentication** using si
 
 ---
 
-### Authentication Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as Client / Swagger
-    participant Auth as Auth Router (/login)
-    participant DB as PostgreSQL (users)
-    participant Sec as Security Engine (JWT)
-    participant Protected as Posts Router (/posts)
-
-    Client->>Auth: POST /api/v1/auth/login (username & password)
-    Auth->>DB: Query user by email
-    DB-->>Auth: Return user record (with hashed password)
-    Auth->>Sec: verify_password(plain_password, hashed_password)
-    Sec-->>Auth: Verified (True)
-    Auth->>Sec: create_access_token(data={"user_id": id})
-    Sec-->>Auth: Encoded JWT String
-    Auth-->>Client: 200 OK {"access_token": "...", "token_type": "bearer"}
-
-    Note over Client,Protected: Authorized Requests
-    Client->>Protected: POST /api/v1/posts/ [Header: Authorization: Bearer <token>]
-    Protected->>Sec: get_current_user(token)
-    Sec->>Sec: Decode JWT & verify expiration
-    Sec->>DB: Fetch user by token user_id
-    DB-->>Sec: User object
-    Sec-->>Protected: Authenticated User context
-    Protected->>DB: Insert new post record
-    DB-->>Protected: Post inserted
-    Protected-->>Client: 201 Created Post JSON
-![alt text](img/image.png)
-
 ## Project Architecture
 
 ```text
 app/
-├── api/
-│   └── v1/
-│       └── posts/
-│           ├── __init__.py
-│           ├── router.py       # Posts endpoints (/api/v1/posts)
-│           └── schemas.py      # Pydantic models for validation
-│
+├── api/v1/
+│   ├── auth/                    # Complete Auth & Security Subsystem
+│   │   ├── auth_router.py       # POST /register and POST /login
+│   │   ├── security.py          # bcrypt hashing, JWT tokens, get_current_user guard
+│   │   └── user_schemas.py      # UserCreate, UserResponse, Token schemas
+│   └── posts/                   # Instagram CRUD Subsystem
+│       ├── router.py            # Protected CRUD routes (Depends(get_current_user))
+│       └── schemas.py           # PostCreate, PostResponse models
 ├── db/
-│   ├── __init__.py
-│   └── database.py             # PostgreSQL connection & cursor handling
-│
-├── main.py                     # Minimal application entrypoint
-├── requirements.txt
-└── README.md
+│   ├── database.py              # SQLAlchemy engine & SessionLocal (get_db dependency)
+│   └── models.py                # Database tables: Post and User (with bcrypt password)
+├── main.py                      # Application bootstrap & router aggregator
+├── docker-compose.yml           # Multi-container orchestration (FastAPI + PostgreSQL)
+├── Dockerfile                   # Python 3.11 container image
+├── .env & .env.example          # Ignored credentials & committed schema template
+└── readme.md                    # Architecture overview and setup guides
