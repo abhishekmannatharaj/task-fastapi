@@ -1,132 +1,97 @@
-## follow up link for next project
-https://github.com/abhishekmannatharaj/pandas-analytics.git
-
-## Run fastapi
-
-```powershell
-# Create a fresh local Python execution sandbox environment
-py -3 -m venv venv
-
-# Activate your newly provisioned virtual sandbox infrastructure
-.\venv\Scripts\Activate.ps1
-
-# Bind and resolve all project framework and production module packages
-pip install -r requirements.txt
-
-cd app
-docker desktop start
-docker compose up --build -d
-```
-## docker
-
- docker compose up --build -d
- docker compose up -d
- docker compose down
-
 # FastAPI Instagram-Style Backend Service
 
-A modular backend CRUD API built with **FastAPI** and **PostgreSQL**, structured according to production best practices with versioned routing and segregated schemas.
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg?style=flat&logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 
-## FastAPI & CRUD Operations Cheat Sheet
-
-This service implements a modular, database-backed RESTful API following standard HTTP semantics and the active record / ORM repository pattern.
-
----
-
-### Core CRUD Endpoints Matrix
-
-| HTTP Verb | Path | Action / Operation | Status Code | Request Body | Response Model | Idempotent? |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/posts/` | **Create** a new post | `201 Created` | `PostCreate` | `PostResponse` | No |
-| `GET` | `/api/v1/posts/` | **Read** all posts | `200 OK` | *None* | `List[PostResponse]` | Yes |
-| `GET` | `/api/v1/posts/{id}` | **Read** a single post by ID | `200 OK` | *None* | `PostResponse` | Yes |
-| `GET` | `/api/v1/posts/latest`| **Read** the most recently created post | `200 OK` | *None* | `PostResponse` | Yes |
-| `PUT` | `/api/v1/posts/{id}` | **Update** / Replace an existing post | `200 OK` | `PostCreate` | `PostResponse` | Yes |
-| `DELETE`| `/api/v1/posts/{id}` | **Delete** a post record | `204 No Content` | *None* | *None (Empty)* | Yes |
+A modular, production-grade backend CRUD API built with **FastAPI** and **PostgreSQL**, implementing OAuth2 JWT authentication, versioned routing (`/api/v1`), and strict schema segregation.
+<img width="1508" height="697" alt="img2" src="https://github.com/user-attachments/assets/d06c8145-6645-4830-b0de-f848e51a67d7" />
+<img width="1872" height="872" alt="image" src="https://github.com/user-attachments/assets/31f1f097-0437-415e-9e11-4dcef487b04a" />
 
 ---
 
-### Key Architectural Concepts
-
-* **FastAPI Dependency Injection (`Depends(get_db)`):** 
-  Guarantees that an isolated SQLAlchemy session is generated per request and systematically closed inside a `finally` block once the response is returned, preventing database connection leaks.
-* **Separation of Schemas and Models:**
-  * **Pydantic Schemas (`schemas.py`):** Define the wire format and validation contracts for incoming JSON payloads (`PostCreate`) and outgoing serializations (`PostResponse`).
-  * **SQLAlchemy Models (`models.py`):** Define the physical PostgreSQL schema (tables, constraints, primary keys, and server defaults).
-* **Automatic ORM Serialization (`from_attributes = True`):** 
-  Enables Pydantic v2 to inspect attributes directly off native SQLAlchemy model instances and format them into JSON responses without manual dictionary transformations.
-* **Database-Enforced Timestamps:** 
-  Uses `server_default=text("now()")` in PostgreSQL to ensure the database engine stamps creation times precisely, removing clock-skew issues between servers.
-
----
-
-### CRUD Request Lifecycle Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as Client / Frontend
-    participant Route as FastAPI Router (/posts)
-    participant Schema as Pydantic (PostCreate)
-    participant DB as SQLAlchemy Session (get_db)
-    participant PG as PostgreSQL Engine
-
-    Client->>Route: POST /api/v1/posts/ (JSON Payload)
-    Route->>Schema: Validate JSON structure
-    alt Schema Validation Fails
-        Schema-->>Client: 422 Unprocessable Entity
-    else Schema Validation Passes
-        Route->>DB: Open Session (yield db)
-        Route->>DB: Instantiate Post(**post.model_dump())
-        Route->>PG: INSERT INTO posts ... RETURNING *
-        PG-->>DB: Raw Row Record
-        Route->>DB: db.commit() & db.refresh()
-        Route-->>Client: 201 Created (Serialized PostResponse)
-        Route->>DB: db.close() (Session cleanup)
-    end
-
----
-## Authentication & Security Cheat Sheet
-
-This API implements stateless **OAuth2 Password Bearer Authentication** using signed **JSON Web Tokens (JWT)** and **bcrypt** password hashing.
-
----
-
-### Key Authentication Endpoints
-
-| Method | Endpoint | Description | Auth Required? | Payload Type |
-| :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/register` | Registers a new user account and stores a salted `bcrypt` password hash. | No | `application/json` |
-| `POST` | `/api/v1/auth/login` | Validates credentials and returns an encoded JWT access token. | No | `x-www-form-urlencoded` |
-| `POST` | `/api/v1/posts/` | Creates a new post (protected route). | **Yes (Bearer Token)** | `application/json` |
-
----
-
-### Core Security Architecture
-
-* **One-Way Password Hashing (`bcrypt`):** Raw passwords are never stored in plain text[cite: 1]. Passwords are automatically salted and hashed before persistence, neutralizing rainbow-table attacks.
-* **Stateless JWT Authorization (`HS256`):** The server does not maintain session state in memory. Signed tokens contain the user payload (`user_id`) and an expiration timestamp (`exp`).
-* **Route Protection via Dependency Injection:** Endpoints declare `current_user: User = Depends(get_current_user)`. FastAPI intercepts the `Authorization: Bearer <token>` header, decodes the signature, and retrieves the active user model[cite: 1].
-* **Schema Separation:** Input credentials (`UserCreate`) accept raw passwords, while responses (`UserResponse`) omit sensitive fields to prevent credential leakage[cite: 1].
-
----
-
-## Project Architecture
+## Project Structure
 
 ```text
 app/
-├── api/v1/
-│   ├── auth/                    # Complete Auth & Security Subsystem
-│   │   ├── auth_router.py       # POST /register and POST /login
-│   │   ├── security.py          # bcrypt hashing, JWT tokens, get_current_user guard
-│   │   └── user_schemas.py      # UserCreate, UserResponse, Token schemas
-│   └── posts/                   # Instagram CRUD Subsystem
-│       ├── router.py            # Protected CRUD routes (Depends(get_current_user))
-│       └── schemas.py           # PostCreate, PostResponse models
+├── api/
+│   └── v1/
+│       ├── auth/
+│       │   ├── auth_router.py     # POST /register, POST /login
+│       │   ├── security.py        # bcrypt hashing, JWT tokens, get_current_user guard
+│       │   └── user_schemas.py    # UserCreate, UserResponse, Token schemas
+│       └── posts/
+│           ├── router.py          # Protected Post CRUD routes
+│           └── schemas.py         # PostCreate, PostResponse models
 ├── db/
 │   ├── __init__.py
-│   └── database.py             # PostgreSQL connection & cursor handling
-│
-├── main.py                     # Minimal application entrypoint
+│   └── database.py                # PostgreSQL engine, sessionmaker & Base
+├── main.py                        # Application entrypoint & router registry
 ├── requirements.txt
 └── README.md
+```
+
+---
+
+## Quick Start & Local Setup
+
+### Option 1: Local Python Environment (PowerShell)
+
+```powershell
+# Create a virtual environment
+py -3 -m venv venv
+
+# Activate the virtual environment
+.\venv\Scripts\Activate.ps1
+
+# Install project dependencies
+pip install -r requirements.txt
+
+# Launch FastAPI development server
+uvicorn app.main:app --reload
+```
+
+### Option 2: Docker Compose
+
+```bash
+# Build and run containers in detached mode
+docker compose up --build -d
+
+# Check running container status
+docker compose ps
+
+# View live container logs
+docker compose logs -f
+
+# Stop and tear down containers
+docker compose down
+```
+
+---
+
+## API Endpoints Matrix
+
+Base URL prefix: `/api/v1`
+
+| Method | Endpoint | Action / Operation | Auth Required? | Request Body | Response Model | Status |
+| :--- | :--- | :--- | :---: | :--- | :--- | :---: |
+| `POST` | `/auth/register` | Register a new user | No | `UserCreate` (JSON) | `UserResponse` | `201` |
+| `POST` | `/auth/login` | Authenticate & obtain JWT | No | `OAuth2PasswordRequestForm` | `Token` | `200` |
+| `POST` | `/posts/` | Create a new post | **Yes** | `PostCreate` (JSON) | `PostResponse` | `201` |
+| `GET` | `/posts/` | Retrieve all posts | No | *None* | `List[PostResponse]` | `200` |
+| `GET` | `/posts/{id}` | Retrieve post by ID | No | *None* | `PostResponse` | `200` |
+| `GET` | `/posts/latest` | Retrieve newest post | No | *None* | `PostResponse` | `200` |
+| `PUT` | `/posts/{id}` | Replace existing post | **Yes** | `PostCreate` (JSON) | `PostResponse` | `200` |
+| `DELETE`| `/posts/{id}` | Remove a post record | **Yes** | *None* | *None* | `204` |
+
+## Next Project Reference
+- **Analytics Service:** [pandas-analytics Repository](https://github.com/abhishekmannatharaj/pandas-analytics.git)
+
+---
+
+---
+
+## Architecture & Design Patterns
+
+### Request Lifecycle Workflow
+<img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/09db7237-600f-4fd9-afc3-742230745666" />
