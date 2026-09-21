@@ -59,6 +59,33 @@ This service implements a modular, database-backed RESTful API following standar
   Uses `server_default=text("now()")` in PostgreSQL to ensure the database engine stamps creation times precisely, removing clock-skew issues between servers.
 
 ---
+
+### CRUD Request Lifecycle Workflow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Client / Frontend
+    participant Route as FastAPI Router (/posts)
+    participant Schema as Pydantic (PostCreate)
+    participant DB as SQLAlchemy Session (get_db)
+    participant PG as PostgreSQL Engine
+
+    Client->>Route: POST /api/v1/posts/ (JSON Payload)
+    Route->>Schema: Validate JSON structure
+    alt Schema Validation Fails
+        Schema-->>Client: 422 Unprocessable Entity
+    else Schema Validation Passes
+        Route->>DB: Open Session (yield db)
+        Route->>DB: Instantiate Post(**post.model_dump())
+        Route->>PG: INSERT INTO posts ... RETURNING *
+        PG-->>DB: Raw Row Record
+        Route->>DB: db.commit() & db.refresh()
+        Route-->>Client: 201 Created (Serialized PostResponse)
+        Route->>DB: db.close() (Session cleanup)
+    end
+
+---
 ## Authentication & Security Cheat Sheet
 
 This API implements stateless **OAuth2 Password Bearer Authentication** using signed **JSON Web Tokens (JWT)** and **bcrypt** password hashing.
@@ -97,10 +124,9 @@ app/
 │       ├── router.py            # Protected CRUD routes (Depends(get_current_user))
 │       └── schemas.py           # PostCreate, PostResponse models
 ├── db/
-│   ├── database.py              # SQLAlchemy engine & SessionLocal (get_db dependency)
-│   └── models.py                # Database tables: Post and User (with bcrypt password)
-├── main.py                      # Application bootstrap & router aggregator
-├── docker-compose.yml           # Multi-container orchestration (FastAPI + PostgreSQL)
-├── Dockerfile                   # Python 3.11 container image
-├── .env & .env.example          # Ignored credentials & committed schema template
-└── readme.md                    # Architecture overview and setup guides
+│   ├── __init__.py
+│   └── database.py             # PostgreSQL connection & cursor handling
+│
+├── main.py                     # Minimal application entrypoint
+├── requirements.txt
+└── README.md
