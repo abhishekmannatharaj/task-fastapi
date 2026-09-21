@@ -1,4 +1,4 @@
-## follow up link
+## follow up link for next project
 https://github.com/abhishekmannatharaj/pandas-analytics.git
 
 ## Run fastapi
